@@ -1,0 +1,10 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+_build/
+deps/
+priv/repo/*.db
+priv/static/
+.elixir_ls/
