@@ -31,33 +31,21 @@ export default function LoginView({
         <div className="flex bg-zinc-950 p-1 rounded-xl mb-6 border border-zinc-800">
           <button
             type="button"
-            onClick={() => {
-              setAuthMode("login");
-              setError("");
-              setSuccessMsg("");
-            }}
+            onClick={() => { setAuthMode("login"); setError(""); setSuccessMsg(""); }}
             className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
-              authMode === "login"
-                ? "bg-purple-600 text-white shadow-md"
-                : "text-zinc-400 hover:text-zinc-200"
+              authMode === "login" ? "bg-purple-600 text-white shadow-md" : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
             Bejelentkezés
           </button>
           <button
             type="button"
-            onClick={() => {
-              setAuthMode("register");
-              setError("");
-              setSuccessMsg("");
-            }}
+            onClick={() => { setAuthMode("register"); setError(""); setSuccessMsg(""); }}
             className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${
-              authMode === "register"
-                ? "bg-purple-600 text-white shadow-md"
-                : "text-zinc-400 hover:text-zinc-200"
+              authMode === "register" ? "bg-purple-600 text-white shadow-md" : "text-zinc-400 hover:text-zinc-200"
             }`}
           >
-            Kliens Regisztráció
+            Regisztráció (Kódos)
           </button>
         </div>
 
@@ -75,15 +63,13 @@ export default function LoginView({
         {authMode === "login" ? (
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="text-xs font-medium text-zinc-400">
-                Email / Felhasználónév
-              </label>
+              <label className="text-xs font-medium text-zinc-400">Email / Felhasználónév</label>
               <input
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder="Edzőnek: G"
+                placeholder="Főadminnak: G"
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm mt-1 focus:outline-none focus:border-purple-500 text-zinc-100"
               />
             </div>
@@ -94,7 +80,7 @@ export default function LoginView({
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                placeholder="Edzőnek: 123"
+                placeholder="Főadminnak: 123"
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm mt-1 focus:outline-none focus:border-purple-500 text-zinc-100"
               />
             </div>
@@ -108,22 +94,18 @@ export default function LoginView({
         ) : (
           <form onSubmit={handleRegister} className="space-y-4">
             <div>
-              <label className="text-xs font-medium text-zinc-400">
-                Teljes Név
-              </label>
+              <label className="text-xs font-medium text-zinc-400">Teljes Név</label>
               <input
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                placeholder="Kovács Péter"
+                placeholder="Kovács Péter vagy Pintér Gergő"
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-sm mt-1 focus:outline-none focus:border-purple-500 text-zinc-100"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-zinc-400">
-                Email Cím
-              </label>
+              <label className="text-xs font-medium text-zinc-400">Email Cím</label>
               <input
                 type="email"
                 value={email}
@@ -146,22 +128,25 @@ export default function LoginView({
             </div>
             <div>
               <label className="text-xs font-medium text-purple-400">
-                Meghívókód
+                Meghívókód (Edzői vagy Kliens kód)
               </label>
               <input
                 type="text"
                 value={inviteCode}
                 onChange={(e) => setInviteCode(e.target.value)}
                 required
-                placeholder="GORVIN-XXXXXX"
+                placeholder="EDZO-XXXX vagy PG-XXXX"
                 className="w-full bg-zinc-950 border border-purple-500/50 rounded-lg p-3 text-sm mt-1 focus:outline-none focus:border-purple-500 text-purple-300 font-mono uppercase"
               />
+              <p className="text-[10px] text-zinc-500 mt-1">
+                * Ha edzői kódot adsz meg, edzőként regisztrálsz. Ha kliens kódot, a hozzá tartozó edzőhöz kerülsz.
+              </p>
             </div>
             <button
               type="submit"
               className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg text-sm transition mt-2 shadow-lg shadow-purple-600/30"
             >
-              Regisztráció Kliensként
+              Regisztráció Kóddal
             </button>
           </form>
         )}

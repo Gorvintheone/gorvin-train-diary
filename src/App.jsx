@@ -19,8 +19,13 @@ export default function App() {
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  // Edzők listája és előtagjaik
+  const [trainers, setTrainers] = useState([
+    { id: "trainer_1", name: "Gorvin WS (Főadmin)", email: "G", prefix: "G" },
+  ]);
+
   const [clients, setClients] = useState([
-    { id: "1", name: "Minta Kliens Péter", email: "peter@test.com" },
+    { id: "1", name: "Minta Kliens Péter", email: "peter@test.com", trainerId: "trainer_1" },
   ]);
   const [selectedClient, setSelectedClient] = useState("1");
 
@@ -31,9 +36,13 @@ export default function App() {
   const [workouts, setWorkouts] = useState({});
 
   const [workoutInput, setWorkoutInput] = useState("");
-  const [generatedCode, setGeneratedCode] = useState("");
+  const [generatedClientCode, setGeneratedClientCode] = useState("");
+  const [generatedTrainerCode, setGeneratedTrainerCode] = useState("");
   const [savedStatus, setSavedStatus] = useState(false);
-  const [activeCodes, setActiveCodes] = useState(["GORVIN-DEMO12"]);
+
+  // Aktív kódok listái
+  const [activeTrainerCodes, setActiveTrainerCodes] = useState(["EDZO-MASTER"]);
+  const [activeClientCodes, setActiveClientCodes] = useState(["G-DEMO12"]);
 
   useEffect(() => {
     getWorkouts()
@@ -77,13 +86,10 @@ export default function App() {
     e.preventDefault();
     setError("");
 
+    // Főadmin ellenőrzés
     if (email === "G" && password === "123") {
-      const mockUser = {
-        id: "trainer_1",
-        name: "Gorvin WS (Edző)",
-        email: "G",
-        role: "trainer",
-      };
+      const mockUser = trainers[0];
+      mockUser.role = "trainer";
       setToken("mock-trainer-token");
       setUser(mockUser);
       localStorage.setItem("token", "mock-trainer-token");
@@ -91,6 +97,18 @@ export default function App() {
       return;
     }
 
+    // Regisztrált többi edző ellenőrzése
+    const foundTrainer = trainers.find((t) => t.email === email);
+    if (foundTrainer) {
+      const trainerUser = { ...foundTrainer, role: "trainer" };
+      setToken("mock-trainer-token");
+      setUser(trainerUser);
+      localStorage.setItem("token", "mock-trainer-token");
+      localStorage.setItem("user", JSON.stringify(trainerUser));
+      return;
+    }
+
+    // Kliens ellenőrzése
     const foundClient = clients.find((c) => c.email === email);
     if (foundClient) {
       const mockClientUser = {
@@ -98,6 +116,7 @@ export default function App() {
         name: foundClient.name,
         email: foundClient.email,
         role: "client",
+        trainerId: foundClient.trainerId,
       };
       setToken("mock-client-token");
       setUser(mockClientUser);
@@ -115,21 +134,65 @@ export default function App() {
     setSuccessMsg("");
 
     const cleanCode = inviteCode.trim().toUpperCase();
-    if (!activeCodes.includes(cleanCode)) {
-      setError("Érvénytelen vagy már felhasznált meghívókód!");
+
+    // 1. Ha EDZO kódot adott meg
+    if (cleanCode.startsWith("EDZO-")) {
+      if (!activeTrainerCodes.includes(cleanCode)) {
+        setError("Érvénytelen vagy már felhasznált edzői meghívókód!");
+        return;
+      }
+
+      // Előtag generálás a névből (pl. Pintér Gergő -> PG)
+      const nameParts = name.trim().split(" ");
+      const prefix = nameParts.length >= 2 
+        ? (nameParts[0][0] + nameParts[1][0]).toUpperCase() 
+        : name.substring(0, 2).toUpperCase();
+
+      const newTrainerId = `trainer_${Date.now()}`;
+      const newTrainer = {
+        id: newTrainerId,
+        name,
+        email,
+        prefix,
+        role: "trainer",
+      };
+
+      setTrainers((prev) => [...prev, newTrainer]);
+      setActiveTrainerCodes((prev) => prev.filter((c) => c !== cleanCode));
+      setSuccessMsg("Sikeres edzői regisztráció! Most már bejelentkezhetsz.");
+      setAuthMode("login");
+      setPassword("");
+      setInviteCode("");
       return;
     }
 
+    // 2. Ha Kliens kódot adott meg (pl. PG-XXXXXX vagy G-XXXXXX)
+    if (!activeClientCodes.includes(cleanCode)) {
+      setError("Érvénytelen vagy már felhasznált kliens meghívókód!");
+      return;
+    }
+
+    // Megkeressük, melyik edzőhöz tartozik a kód előtagja
+    const prefix = cleanCode.split("-")[0];
+    const targetTrainer = trainers.find((t) => t.prefix === prefix) || trainers[0];
+
     const newClientId = String(Date.now());
-    const newClient = { id: newClientId, name, email, role: "client" };
+    const newClient = {
+      id: newClientId,
+      name,
+      email,
+      role: "client",
+      trainerId: targetTrainer.id,
+    };
 
     setClients((prev) => [...prev, newClient]);
-    setActiveCodes((prev) => prev.filter((c) => c !== cleanCode));
+    setActiveClientCodes((prev) => prev.filter((c) => c !== cleanCode));
     setSelectedClient(newClientId);
 
-    setSuccessMsg("Sikeres regisztráció! Most már bejelentkezhetsz.");
+    setSuccessMsg("Sikeres kliens regisztráció! Most már bejelentkezhetsz.");
     setAuthMode("login");
     setPassword("");
+    setInviteCode("");
   };
 
   const logout = () => {
@@ -138,11 +201,21 @@ export default function App() {
     localStorage.clear();
   };
 
-  const generateInvite = () => {
-    const code =
-      "GORVIN-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-    setGeneratedCode(code);
-    setActiveCodes((prev) => [...prev, code]);
+  // Kliens kód generálás az adott edző prefixével (pl. PG-1234AB)
+  const generateClientInvite = () => {
+    const currentTrainer = trainers.find((t) => t.id === user.id) || trainers[0];
+    const prefix = currentTrainer.prefix || "G";
+    const code = `${prefix}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    
+    setGeneratedClientCode(code);
+    setActiveClientCodes((prev) => [...prev, code]);
+  };
+
+  // Főadmin edzői kód generálás
+  const generateTrainerInvite = () => {
+    const code = `EDZO-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    setGeneratedTrainerCode(code);
+    setActiveTrainerCodes((prev) => [...prev, code]);
   };
 
   const saveWorkout = () => {
@@ -179,6 +252,11 @@ export default function App() {
   const activeClientId =
     user.role === "client" ? String(user.id) : selectedClient;
 
+  // Ha az edző bejelentkezett, csak a saját klienseit látja
+  const filteredClients = user.id === "trainer_1" 
+    ? clients 
+    : clients.filter(c => c.trainerId === user.id);
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 p-4 md:p-6">
       <header className="flex justify-between items-center pb-6 border-b border-zinc-800 max-w-5xl mx-auto mb-6">
@@ -188,8 +266,8 @@ export default function App() {
           </h1>
           <p className="text-xs text-zinc-400">
             Üdv,{" "}
-            <span className="text-purple-300 font-semibold">{user.name}</span> (
-            {user.role === "trainer" ? "Edző" : "Kliens"})
+            <span className="text-purple-300 font-semibold">{user.name}</span>{" "}
+            {user.role === "trainer" ? `(Edző - Kód prefix: ${user.prefix})` : "(Kliens)"}
           </p>
         </div>
         <button
@@ -203,11 +281,15 @@ export default function App() {
       <main className="max-w-5xl mx-auto space-y-6">
         {user.role === "trainer" && (
           <TrainerControls
-            clients={clients}
+            clients={filteredClients}
             selectedClient={selectedClient}
             setSelectedClient={setSelectedClient}
-            generateInvite={generateInvite}
-            generatedCode={generatedCode}
+            trainers={trainers}
+            generateClientInvite={generateClientInvite}
+            generatedClientCode={generatedClientCode}
+            generateTrainerInvite={generateTrainerInvite}
+            generatedTrainerCode={generatedTrainerCode}
+            user={user}
           />
         )}
 
